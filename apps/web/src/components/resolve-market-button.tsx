@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { DELAY_MARKET_CONTRACT_ADDRESS, DELAY_MARKET_ABI } from "@/lib/contract";
+import { useState, useEffect } from "react";
+import { resolveMarket, checkBackendHealth, type ResolveMarketResponse } from "@/lib/api";
 
 interface ResolveMarketButtonProps {
   marketId: string;
@@ -20,42 +20,39 @@ export function ResolveMarketButton({
   scheduledDeparture,
 }: ResolveMarketButtonProps) {
   const [isResolving, setIsResolving] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4500";
+  const [result, setResult] = useState<{ success: boolean; data?: ResolveMarketResponse; error?: string } | null>(null);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkBackendHealth().then(setBackendOnline);
+    const interval = setInterval(() => {
+      checkBackendHealth().then(setBackendOnline);
+    }, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const handleResolve = async () => {
     setIsResolving(true);
     setResult(null);
 
     try {
-      const marketIdBytes = marketId.startsWith("0x") 
-        ? marketId 
-        : `0x${marketId}`;
-
-      const params = new URLSearchParams({
-        marketId: marketIdBytes,
+      const data = await resolveMarket({
+        marketId,
         originCode,
         airlineCode,
         flightNumber,
         date: scheduledDeparture,
       });
 
-      const response = await fetch(`${backendUrl}/resolve?${params.toString()}`);
-      const data = await response.json();
+      setResult({
+        success: true,
+        data,
+      });
 
-      if (response.ok) {
-        setResult({
-          success: true,
-          outcome: data.outcome,
-          flight: data.flight,
-          txHash: data.blockchain?.txHash,
-        });
-      } else {
-        setResult({
-          success: false,
-          error: data.error || "Failed to resolve market",
-        });
-      }
+      // Auto-refresh after 3 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     } catch (error) {
       setResult({
         success: false,
@@ -73,15 +70,33 @@ export function ResolveMarketButton({
     4: "Cancelled",
   };
 
+  if (backendOnline === false) {
+    return (
+      <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
+        <p className="text-yellow-400 text-sm">
+          ⚠️ Backend offline. Please start the backend server.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-4">
-      <button
-        onClick={handleResolve}
-        disabled={isResolving}
-        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-      >
-        {isResolving ? "Resolving..." : "Resolve Market (Backend)"}
-      </button>
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={handleResolve}
+          disabled={isResolving || backendOnline === false}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        >
+          {isResolving ? "Resolving..." : "Resolve Market"}
+        </button>
+        {backendOnline && (
+          <span className="text-xs text-green-400 flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+            Backend Online
+          </span>
+        )}
+      </div>
 
       {result && (
         <div className={`mt-3 p-3 rounded-lg ${
@@ -89,24 +104,24 @@ export function ResolveMarketButton({
             ? "bg-green-500/20 border border-green-500/50" 
             : "bg-red-500/20 border border-red-500/50"
         }`}>
-          {result.success ? (
+          {result.success && result.data ? (
             <div>
               <p className="text-green-400 font-semibold text-sm">
-                Market Resolved: {outcomeNames[result.outcome]}
+                ✅ Market Resolved: {outcomeNames[result.data.outcome]}
               </p>
-              {result.txHash && (
+              {result.data.blockchain.txHash && (
                 <p className="text-xs text-gray-400 mt-1">
-                  TX: {result.txHash.slice(0, 10)}...
+                  TX: {result.data.blockchain.txHash.slice(0, 10)}...
                 </p>
               )}
-              {result.flight && (
+              {result.data.flight && (
                 <p className="text-xs text-gray-400 mt-1">
-                  Delay: {result.flight.departure?.delay || 0} minutes
+                  Delay: {result.data.flight.departure?.delay || 0} minutes
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-red-400 text-sm">{result.error}</p>
+            <p className="text-red-400 text-sm">❌ {result.error}</p>
           )}
         </div>
       )}

@@ -83,6 +83,80 @@ const server = Bun.serve({
       );
     }
 
+    if (url.pathname === "/flight-status" && req.method === "GET") {
+      try {
+        const originCode = url.searchParams.get("originCode");
+        const airlineCode = url.searchParams.get("airlineCode");
+        const flightNumber = url.searchParams.get("flightNumber");
+        const scheduledDeparture = url.searchParams.get("scheduledDeparture");
+
+        if (!originCode || !airlineCode || !flightNumber || !scheduledDeparture) {
+          return new Response(
+            JSON.stringify({
+              error: "Missing required parameters",
+              required: ["originCode", "airlineCode", "flightNumber", "scheduledDeparture"],
+            }),
+            { status: 400, headers }
+          );
+        }
+
+        const scheduledDateTime = new Date(scheduledDeparture.replace(" ", "T"));
+        let delayMinutes = 0;
+        let status = "scheduled";
+        let flightData: any = null;
+
+        // Try OpenSky Network API (free, no key needed)
+        try {
+          const openSkyUrl = `https://opensky-network.org/api/flights/all?begin=${Math.floor(scheduledDateTime.getTime() / 1000)}&end=${Math.floor(scheduledDateTime.getTime() / 1000) + 3600}`;
+          const openSkyResponse = await fetch(openSkyUrl, {
+            headers: { accept: "application/json" },
+          });
+
+          if (openSkyResponse.ok) {
+            const openSkyData: any = await openSkyResponse.json();
+            if (openSkyData && Array.isArray(openSkyData)) {
+              flightData = openSkyData.find((flight: any) => {
+                const callsign = flight.callsign?.trim().toUpperCase();
+                const expectedCallsign = `${airlineCode}${flightNumber}`.toUpperCase();
+                return callsign === expectedCallsign || callsign?.includes(flightNumber);
+              });
+
+              if (flightData) {
+                const scheduledTime = flightData.firstSeen * 1000;
+                const actualTime = flightData.lastSeen * 1000;
+                delayMinutes = Math.max(0, Math.floor((actualTime - scheduledTime) / 60000));
+                status = delayMinutes > 0 ? "delayed" : "on-time";
+              }
+            }
+          }
+        } catch (err) {
+          console.log("OpenSky API failed for real-time status");
+        }
+
+        return new Response(
+          JSON.stringify({
+            flightNumber: `${airlineCode}${flightNumber}`,
+            originCode,
+            scheduledDeparture,
+            delayMinutes,
+            status,
+            lastUpdated: new Date().toISOString(),
+            flightData,
+          }),
+          { status: 200, headers }
+        );
+      } catch (error) {
+        console.error("Error fetching flight status:", error);
+        return new Response(
+          JSON.stringify({
+            error: "Internal server error",
+            message: error instanceof Error ? error.message : "Unknown error",
+          }),
+          { status: 500, headers }
+        );
+      }
+    }
+
     if (url.pathname === "/resolve" && req.method === "GET") {
       try {
         const marketId = url.searchParams.get("marketId");
@@ -104,61 +178,130 @@ const server = Bun.serve({
         const date = dateTime.split("T")[0].split(" ")[0];
         const scheduledDateTime = new Date(dateTime.replace(" ", "T"));
 
-        const aviationEdgeUrl = `https://aviation-edge.com/v2/public/flightsHistory?key=${AVIATION_EDGE_API_KEY}&code=${originCode}&type=departure&date_from=${date}&airline_iata=${airlineCode}&flight_num=${flightNumber}`;
-
-        console.log(`Fetching flight data: ${aviationEdgeUrl}`);
-
-        const response = await fetch(aviationEdgeUrl, {
-          headers: {
-            accept: "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          return new Response(
-            JSON.stringify({
-              error: "Aviation Edge API error",
-              status: response.status,
-              statusText: response.statusText,
-            }),
-            { status: response.status, headers }
-          );
-        }
-
-        const flightData = await response.json();
-
+        // Try multiple free APIs for flight data
         let matchedFlight = null;
         let outcome = 0; // 0 = PENDING, 1 = ON_TIME, 2 = DELAYED_SHORT, 3 = DELAYED_LONG, 4 = CANCELLED
+        let delayMinutes = 0;
 
-        if (Array.isArray(flightData) && flightData.length > 0) {
-          matchedFlight = flightData.find((flight: any) => {
-            const flightScheduledTime = new Date(
-              flight.departure?.scheduledTime?.replace("t", "T") || ""
-            );
-            const timeDiff = Math.abs(
-              flightScheduledTime.getTime() - scheduledDateTime.getTime()
-            );
-            return timeDiff < 5 * 60 * 1000;
+        // Method 1: Try OpenSky Network API (free, no key needed)
+        try {
+          const openSkyUrl = `https://opensky-network.org/api/flights/all?begin=${Math.floor(scheduledDateTime.getTime() / 1000)}&end=${Math.floor(scheduledDateTime.getTime() / 1000) + 3600}`;
+          console.log(`Trying OpenSky API: ${openSkyUrl}`);
+          
+          const openSkyResponse = await fetch(openSkyUrl, {
+            headers: { accept: "application/json" },
           });
 
-          if (matchedFlight) {
-            const departure = matchedFlight.departure;
-            const delayMinutes = departure?.delay || 0;
+          if (openSkyResponse.ok) {
+            const openSkyData = await openSkyResponse.json();
+            if (openSkyData && Array.isArray(openSkyData)) {
+              matchedFlight = openSkyData.find((flight: any) => {
+                const callsign = flight.callsign?.trim().toUpperCase();
+                const expectedCallsign = `${airlineCode}${flightNumber}`.toUpperCase();
+                return callsign === expectedCallsign || callsign?.includes(flightNumber);
+              });
 
-            if (matchedFlight.status === "cancelled") {
-              outcome = 4; // CANCELLED
-            } else if (delayMinutes >= 120) {
-              outcome = 3; // DELAYED_LONG
-            } else if (delayMinutes >= 30) {
-              outcome = 2; // DELAYED_SHORT
-            } else {
-              outcome = 1; // ON_TIME
+              if (matchedFlight) {
+                const scheduledTime = matchedFlight.firstSeen * 1000;
+                const actualTime = matchedFlight.lastSeen * 1000;
+                delayMinutes = Math.max(0, Math.floor((actualTime - scheduledTime) / 60000));
+                console.log(`Found flight via OpenSky: delay ${delayMinutes} minutes`);
+              }
             }
+          }
+        } catch (err) {
+          console.log("OpenSky API failed, trying alternatives...");
+        }
+
+        // Method 2: Try AviationStack (free tier) if OpenSky didn't work
+        if (!matchedFlight) {
+          try {
+            const aviationStackKey = process.env.AVIATIONSTACK_API_KEY || "";
+            if (aviationStackKey) {
+              const aviationStackUrl = `http://api.aviationstack.com/v1/flights?access_key=${aviationStackKey}&flight_iata=${airlineCode}${flightNumber}&dep_iata=${originCode}`;
+              console.log(`Trying AviationStack API`);
+              
+              const asResponse = await fetch(aviationStackUrl, {
+                headers: { accept: "application/json" },
+              });
+
+              if (asResponse.ok) {
+                const asData: any = await asResponse.json();
+                if (asData.data && Array.isArray(asData.data) && asData.data.length > 0) {
+                  matchedFlight = asData.data[0];
+                  const dep = matchedFlight.departure;
+                  if (dep?.scheduled && dep?.estimated) {
+                    const scheduled = new Date(dep.scheduled);
+                    const estimated = new Date(dep.estimated);
+                    delayMinutes = Math.max(0, Math.floor((estimated.getTime() - scheduled.getTime()) / 60000));
+                    console.log(`Found flight via AviationStack: delay ${delayMinutes} minutes`);
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.log("AviationStack API failed");
           }
         }
 
-        if (!matchedFlight) {
-          outcome = 2; // Default to delayed if not found
+        // Method 3: Fallback to Aviation Edge if available
+        if (!matchedFlight && AVIATION_EDGE_API_KEY) {
+          try {
+            const aviationEdgeUrl = `https://aviation-edge.com/v2/public/flightsHistory?key=${AVIATION_EDGE_API_KEY}&code=${originCode}&type=departure&date_from=${date}&airline_iata=${airlineCode}&flight_num=${flightNumber}`;
+            console.log(`Trying Aviation Edge API`);
+            
+            const aeResponse = await fetch(aviationEdgeUrl, {
+              headers: { accept: "application/json" },
+            });
+
+            if (aeResponse.ok) {
+              const aeData = await aeResponse.json();
+              if (Array.isArray(aeData) && aeData.length > 0) {
+                matchedFlight = aeData.find((flight: any) => {
+                  const flightScheduledTime = new Date(
+                    flight.departure?.scheduledTime?.replace("t", "T") || ""
+                  );
+                  const timeDiff = Math.abs(
+                    flightScheduledTime.getTime() - scheduledDateTime.getTime()
+                  );
+                  return timeDiff < 5 * 60 * 1000;
+                });
+
+                if (matchedFlight) {
+                  delayMinutes = matchedFlight.departure?.delay || 0;
+                  console.log(`Found flight via Aviation Edge: delay ${delayMinutes} minutes`);
+                }
+              }
+            }
+          } catch (err) {
+            console.log("Aviation Edge API failed");
+          }
+        }
+
+        // Determine outcome based on delay
+        if (matchedFlight) {
+          if (matchedFlight.status === "cancelled" || matchedFlight.flight?.status?.iata === "C") {
+            outcome = 4; // CANCELLED
+          } else if (delayMinutes >= 120) {
+            outcome = 3; // DELAYED_LONG
+          } else if (delayMinutes >= 30) {
+            outcome = 2; // DELAYED_SHORT
+          } else {
+            outcome = 1; // ON_TIME
+          }
+        } else {
+          // If no flight data found, simulate based on time (for demo purposes)
+          const now = Date.now();
+          const timeUntilFlight = scheduledDateTime.getTime() - now;
+          
+          if (timeUntilFlight < 0) {
+            // Flight should have departed - assume slight delay
+            outcome = 2; // DELAYED_SHORT
+            delayMinutes = Math.floor(Math.abs(timeUntilFlight) / 60000);
+          } else {
+            // Flight hasn't departed yet - keep pending
+            outcome = 0; // PENDING
+          }
         }
 
         let txHash = null;

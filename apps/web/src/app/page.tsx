@@ -9,8 +9,8 @@ export default function Home() {
   const { isConnected } = useAccount();
 
   return (
-    <main className="flex-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
-      <section className="flex items-center justify-center min-h-screen py-12 px-4">
+    <div className="flex-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <section className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12 px-4">
         <div className="w-full max-w-2xl mx-auto text-center space-y-8">
           <div className="space-y-4">
             <div className="text-6xl mb-4">✈️</div>
@@ -87,7 +87,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

@@ -71,16 +71,41 @@ export function BetDialog({ marketId, onClose }: { marketId: string; onClose: ()
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Outcome
             </label>
-            <select
-              value={outcome}
-              onChange={(e) => setOutcome(Number(e.target.value) as Outcome)}
-              className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-            >
-              <option value={1}>On Time</option>
-              <option value={2}>Delayed Short (30-119 min)</option>
-              <option value={3}>Delayed Long (120+ min)</option>
-              <option value={4}>Cancelled</option>
-            </select>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setOutcome(1)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  outcome === 1
+                    ? "bg-green-600 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
+                }`}
+              >
+                On Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setOutcome(2)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  outcome === 2
+                    ? "bg-yellow-600 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
+                }`}
+              >
+                30+ min delay
+              </button>
+              <button
+                type="button"
+                onClick={() => setOutcome(3)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  outcome === 3
+                    ? "bg-orange-600 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
+                }`}
+              >
+                120+ min delay
+              </button>
+            </div>
           </div>
 
           <div>
