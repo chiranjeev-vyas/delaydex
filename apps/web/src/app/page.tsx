@@ -61,12 +61,26 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* $DELAY Token Info Banner */}
+          <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-xl p-6 border border-blue-500/30 max-w-3xl mx-auto mt-8">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="text-3xl">💰</span>
+              <h3 className="text-2xl font-bold text-white">Betting with $DELAY Token</h3>
+            </div>
+            <p className="text-gray-300 mb-2">
+              All bets and winnings use our custom ERC-20 token: <span className="font-bold text-cyan-400">$DELAY</span>
+            </p>
+            <p className="text-sm text-gray-400">
+              You need $DELAY tokens to place bets. Get tokens from the faucet or mint them if you're the contract owner.
+            </p>
+          </div>
+
           {/* Features Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 max-w-5xl mx-auto">
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
               <div className="text-4xl mb-4">📊</div>
               <h3 className="text-xl font-bold text-white mb-2">Live Markets</h3>
-              <p className="text-gray-300">Bet on real flights with live odds</p>
+              <p className="text-gray-300">Bet on real flights with live odds using $DELAY tokens</p>
             </div>
 
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
@@ -78,7 +92,7 @@ export default function Home() {
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
               <div className="text-4xl mb-4">💰</div>
               <h3 className="text-xl font-bold text-white mb-2">Win Big</h3>
-              <p className="text-gray-300">Predict correctly and earn rewards</p>
+              <p className="text-gray-300">Predict correctly and earn $DELAY tokens</p>
             </div>
           </div>
 
