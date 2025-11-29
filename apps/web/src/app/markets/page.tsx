@@ -12,6 +12,285 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { formatEther } from "viem";
 
+// My Bets Section Component
+function MyBetsSection({ markets }: { markets: any }) {
+  const { address } = useAccount();
+  const [expandedMarkets, setExpandedMarkets] = useState<Set<string>>(new Set());
+  const [claimMarket, setClaimMarket] = useState<string | null>(null);
+
+  // Get all markets where user has bets - ALWAYS call hooks, conditionally render
+  const marketsWithBets = useMemo(() => {
+    if (!address || !markets || !Array.isArray(markets)) return [];
+    const marketsWithUserBets: any[] = [];
+    
+    markets.forEach((market: any) => {
+      const marketId = market.marketId || "";
+      const marketIdBytes = marketId.startsWith("0x") ? marketId : `0x${marketId}`;
+      
+      marketsWithUserBets.push({
+        ...market,
+        marketIdBytes,
+      });
+    });
+    
+    return marketsWithUserBets;
+  }, [markets, address]);
+
+  // Conditionally render AFTER all hooks are called
+  if (!address || !markets || !Array.isArray(markets) || marketsWithBets.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mb-8">
+      <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-xl p-6 border border-blue-500/30">
+        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          <span>🎯</span>
+          My Active Bets
+        </h2>
+        <p className="text-slate-300 mb-4">View your positions and track your winnings</p>
+        
+        <div className="space-y-3">
+          {marketsWithBets.map((market: any) => (
+            <UserBetCard
+              key={market.marketId}
+              market={market}
+              userAddress={address}
+              expanded={expandedMarkets.has(market.marketId)}
+              onToggle={() => {
+                const newExpanded = new Set(expandedMarkets);
+                if (newExpanded.has(market.marketId)) {
+                  newExpanded.delete(market.marketId);
+                } else {
+                  newExpanded.add(market.marketId);
+                }
+                setExpandedMarkets(newExpanded);
+              }}
+              onClaim={(marketId) => setClaimMarket(marketId)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {claimMarket && (
+        <ClaimWinningsDialog
+          marketId={claimMarket}
+          onClose={() => setClaimMarket(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// User Bet Card Component
+function UserBetCard({
+  market,
+  userAddress,
+  expanded,
+  onToggle,
+  onClaim,
+}: {
+  market: any;
+  userAddress: `0x${string}`;
+  expanded: boolean;
+  onToggle: () => void;
+  onClaim: (marketId: string) => void;
+}) {
+  const marketIdBytes = market.marketIdBytes as `0x${string}`;
+  
+  // Get user's bets for all outcomes and positions
+  const { data: userYesShares1 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 1, 0],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+  
+  const { data: userNoShares1 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 1, 1],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+  
+  const { data: userYesShares2 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 2, 0],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+  
+  const { data: userNoShares2 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 2, 1],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+  
+  const { data: userYesShares3 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 3, 0],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+  
+  const { data: userNoShares3 } = useReadContract({
+    address: DELAY_MARKET_CONTRACT_ADDRESS,
+    abi: DELAY_MARKET_ABI,
+    functionName: "getUserBet",
+    args: [marketIdBytes, userAddress, 3, 1],
+    query: { enabled: !!marketIdBytes && !!userAddress },
+  });
+
+  // Collect all user bets
+  const userBets: Array<{ outcome: number; position: number; shares: bigint }> = [];
+  
+  if (userYesShares1 && userYesShares1 > 0n) {
+    userBets.push({ outcome: 1, position: 0, shares: userYesShares1 as bigint });
+  }
+  if (userNoShares1 && userNoShares1 > 0n) {
+    userBets.push({ outcome: 1, position: 1, shares: userNoShares1 as bigint });
+  }
+  if (userYesShares2 && userYesShares2 > 0n) {
+    userBets.push({ outcome: 2, position: 0, shares: userYesShares2 as bigint });
+  }
+  if (userNoShares2 && userNoShares2 > 0n) {
+    userBets.push({ outcome: 2, position: 1, shares: userNoShares2 as bigint });
+  }
+  if (userYesShares3 && userYesShares3 > 0n) {
+    userBets.push({ outcome: 3, position: 0, shares: userYesShares3 as bigint });
+  }
+  if (userNoShares3 && userNoShares3 > 0n) {
+    userBets.push({ outcome: 3, position: 1, shares: userNoShares3 as bigint });
+  }
+
+  // Don't show if no bets
+  if (userBets.length === 0) return null;
+
+  const outcomeNames: Record<number, string> = {
+    1: "On Time",
+    2: "30+ min delay",
+    3: "120+ min delay",
+  };
+  
+  const positionNames: Record<number, string> = {
+    0: "Yes",
+    1: "No",
+  };
+
+  const isResolved = market.finalOutcome !== 0;
+  const scheduledDate = market.scheduledDeparture 
+    ? (typeof market.scheduledDeparture === 'string'
+        ? new Date(market.scheduledDeparture)
+        : new Date(Number(market.scheduledDeparture) * 1000))
+    : new Date();
+
+  // Calculate win/loss
+  const betsWithStatus = userBets.map((bet) => {
+    let isWinning = false;
+    if (isResolved) {
+      if (bet.outcome === market.finalOutcome && bet.position === 0) {
+        isWinning = true;
+      } else if (bet.outcome !== market.finalOutcome && bet.position === 1) {
+        isWinning = true;
+      }
+    }
+    return { ...bet, isWinning };
+  });
+
+  const hasWinningBets = betsWithStatus.some((bet) => bet.isWinning);
+  const canClaim = isResolved && hasWinningBets;
+
+  return (
+    <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+      <div
+        className="p-4 cursor-pointer hover:bg-slate-700/50 transition-colors"
+        onClick={onToggle}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-white">
+                {market.airlineCode} {market.flightNumber}
+              </span>
+              <span className="px-2 py-1 rounded text-xs bg-slate-700 text-slate-300">
+                {market.originCode} → {market.destinationCode}
+              </span>
+              {isResolved ? (
+                <span className="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300 border border-purple-500/50">
+                  Resolved
+                </span>
+              ) : (
+                <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-300 border border-green-500/50">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">
+              {userBets.length} position{userBets.length > 1 ? 's' : ''} • Result: {scheduledDate.toLocaleString()}
+            </p>
+          </div>
+          <svg
+            className={`w-5 h-5 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-slate-700 p-4 space-y-3">
+          {betsWithStatus.map((bet, index) => (
+            <div
+              key={index}
+              className={`p-3 rounded-lg border ${
+                bet.isWinning
+                  ? "bg-green-500/10 border-green-500/50"
+                  : "bg-slate-700/30 border-slate-600"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                    bet.position === 0 ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
+                  }`}>
+                    {positionNames[bet.position]} on {outcomeNames[bet.outcome]}
+                  </span>
+                  {bet.isWinning && (
+                    <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-300 border border-green-500/50">
+                      🎉 Winner!
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm text-white font-semibold">
+                  {formatEther(bet.shares)} shares
+                </span>
+              </div>
+            </div>
+          ))}
+          
+          {canClaim && (
+            <button
+              onClick={() => onClaim(market.marketId)}
+              className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all"
+            >
+              🎉 Claim Winnings
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MarketsPage() {
   const { isConnected } = useAccount();
   const [showCreate, setShowCreate] = useState(false);
@@ -48,11 +327,10 @@ export default function MarketsPage() {
       return { activePools: 0, totalLiquidity: 0, coverageDemand: 0, avgRisk: 0 };
     }
 
-    const now = Date.now();
+    // Count all markets that are still pending (not resolved)
     const activePools = markets.filter((m: any) => {
-      if (m.finalOutcome !== 0) return false;
-      const scheduledTime = new Date(m.scheduledDeparture).getTime();
-      return scheduledTime > now && scheduledTime < now + 48 * 60 * 60 * 1000;
+      // Market is active if finalOutcome is 0 (Pending)
+      return m.finalOutcome === 0 || m.finalOutcome === undefined;
     }).length;
 
     let totalLiquidity = 0;
@@ -121,6 +399,19 @@ export default function MarketsPage() {
           <p className="text-xl text-gray-300 mb-6 max-w-2xl mx-auto">
             Bet on flight delays. Pick a flight and start trading!
           </p>
+          {/* $DELAY Token Info */}
+          <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-xl p-4 border border-blue-500/30 max-w-2xl mx-auto mb-6">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-2xl">💰</span>
+              <p className="text-lg font-semibold text-white">Betting with $DELAY Token</p>
+            </div>
+            <p className="text-sm text-gray-300">
+              All bets and winnings use our custom ERC-20 token: <span className="font-bold text-cyan-400">$DELAY</span>
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              You need $DELAY tokens to place bets. Get tokens from the faucet or mint them if you're the contract owner.
+            </p>
+          </div>
           {isConnected && (
             <button
               onClick={() => setShowCreate(true)}
@@ -157,6 +448,11 @@ export default function MarketsPage() {
             <p className="text-sm text-gray-400">Avg. risk quote implied probability</p>
           </div>
         </div>
+
+        {/* My Bets Section - Only show if connected */}
+        {isConnected && (
+          <MyBetsSection markets={markets} />
+        )}
 
         {/* Search and Filter Section */}
         <div className="mb-8">
@@ -270,12 +566,48 @@ export default function MarketsPage() {
                 >
                   {/* Flight Header */}
                   <div className="flex justify-between items-start mb-4">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-xs font-semibold">
                           {market.airlineCode}
                         </span>
                         <span className="text-2xl font-bold text-white">{market.flightNumber}</span>
+                      </div>
+                      {/* Result Date / Settlement Date */}
+                      <div className="mt-2 p-2 bg-slate-700/50 rounded-lg border border-slate-600">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400">📅 Result Date:</span>
+                          <span className="text-sm font-semibold text-cyan-400">
+                            {(() => {
+                              try {
+                                const scheduledTime = market.scheduledDeparture 
+                                  ? (typeof market.scheduledDeparture === 'string' 
+                                      ? new Date(market.scheduledDeparture) 
+                                      : new Date(Number(market.scheduledDeparture) * 1000))
+                                  : null;
+                                if (scheduledTime && !isNaN(scheduledTime.getTime())) {
+                                  // Show date and time
+                                  return scheduledTime.toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                                return "TBD";
+                              } catch {
+                                return "TBD";
+                              }
+                            })()}
+                          </span>
+                        </div>
+                        {market.finalOutcome === 0 && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Market resolves after flight departure
+                          </p>
+                        )}
                       </div>
                       <p className="text-gray-300 font-medium">
                         {market.originCode} → {market.destinationCode}

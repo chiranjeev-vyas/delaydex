@@ -5,9 +5,22 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useCha
 import { DELAY_MARKET_CONTRACT_ADDRESS, DELAY_MARKET_ABI, ERC20_ABI } from "@/lib/contract";
 import { parseEther, formatEther, maxUint256 } from "viem";
 import { monadTestnet } from "@/lib/wagmi";
+import { BetSuccessPopup } from "./bet-success-popup";
 
 type Outcome = 0 | 1 | 2 | 3 | 4; // Pending, OnTime, DelayedShort, DelayedLong, Cancelled
 type Position = 0 | 1; // Yes, No
+
+// Outcome and position names for display
+const outcomeNames: Record<number, string> = {
+  1: "On Time",
+  2: "30+ min delay",
+  3: "120+ min delay",
+};
+
+const positionNames: Record<number, string> = {
+  0: "Yes",
+  1: "No",
+};
 
 export function BetDialog({ marketId, onClose }: { marketId: string; onClose: () => void }) {
   const [outcome, setOutcome] = useState<Outcome>(1);
@@ -109,9 +122,6 @@ export function BetDialog({ marketId, onClose }: { marketId: string; onClose: ()
       setIsApproving(false);
     }
   }, [approveError]);
-
-  const outcomeNames = ["", "On Time", "Delayed Short", "Delayed Long", "Cancelled"];
-  const positionNames = ["Yes", "No"];
 
   const handleApprove = async () => {
     if (!paymentTokenAddress || !DELAY_MARKET_CONTRACT_ADDRESS) {
@@ -280,19 +290,39 @@ export function BetDialog({ marketId, onClose }: { marketId: string; onClose: ()
     }
   };
 
-  if (isSuccess) {
-    setTimeout(() => {
-      onClose();
-      window.location.reload();
-    }, 2000);
-  }
-
+  // Get outcome and position names for display (moved to top level to avoid redeclaration)
+  const outcomeName = outcomeNames[outcome] || "Unknown";
+  const positionName = positionNames[position] || "Unknown";
+  
   const currentPrice = marketPrice ? Number(formatEther(marketPrice)) * 100 : parseFloat(price) * 100;
   const cost = shares ? (parseFloat(shares) * currentPrice) / 100 : 0;
   const hasInsufficientBalance = tokenBalance !== undefined && shares ? (parseEther(shares) * (marketPrice || parseEther(price))) / parseEther("1") > tokenBalance : false;
+  
+  // Show success popup when transaction is submitted
+  const showSuccessPopup = !!hash;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <>
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <BetSuccessPopup
+          txHash={hash}
+          onClose={() => {
+            onClose();
+            if (isSuccess) {
+              setTimeout(() => window.location.reload(), 500);
+            }
+          }}
+          marketId={marketId}
+          outcome={outcomeName}
+          position={positionName}
+          shares={shares || "0"}
+          cost={cost.toFixed(4)}
+        />
+      )}
+
+      {/* Bet Dialog */}
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-slate-800 rounded-2xl shadow-xl border border-slate-700 max-w-md w-full p-6">
         <h2 className="text-2xl font-bold text-white mb-6">Place Bet</h2>
 
@@ -334,8 +364,12 @@ export function BetDialog({ marketId, onClose }: { marketId: string; onClose: ()
 
         {tokenBalance !== undefined && (
           <div className="mb-4 p-3 bg-slate-700/50 rounded-lg text-sm">
-            <div className="flex justify-between text-gray-300">
-              <span>Your Token Balance:</span>
+            <div className="mb-2 p-2 bg-blue-600/20 rounded border border-blue-500/30">
+              <p className="text-xs text-blue-300 font-semibold mb-1">💰 Using $DELAY Token</p>
+              <p className="text-xs text-gray-400">All bets require $DELAY (ERC-20) tokens. Winnings are paid in $DELAY tokens.</p>
+            </div>
+            <div className="flex justify-between text-gray-300 mt-2">
+              <span>Your $DELAY Balance:</span>
               <span className="font-semibold text-white">{formatEther(tokenBalance)} DELAY</span>
             </div>
             <div className="flex justify-between text-gray-400 text-xs mt-1">
@@ -494,6 +528,7 @@ export function BetDialog({ marketId, onClose }: { marketId: string; onClose: ()
         </div>
       </div>
     </div>
+    </>
   );
 }
 

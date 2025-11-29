@@ -1,360 +1,273 @@
-# DelayDex - Flight Delay Prediction Markets ✈️
+# DelayDex - Flight Delay Prediction Markets
 
-> Decentralized prediction markets for flight delays on Monad testnet
+A decentralized prediction market platform for betting on flight delays, built on Monad Testnet. Users can create markets, place bets, and claim winnings using the custom $DELAY ERC-20 token.
 
-DelayDex is a decentralized prediction market platform where users can bet on flight delays and cancellations. Built with Next.js, Bun.js, Solidity, and deployed on Monad testnet.
+## 🚀 Features
 
-## 🎯 Features
+- **Flight Delay Prediction Markets**: Create and bet on flight delay outcomes
+- **Custom ERC-20 Token**: All bets use $DELAY token (ERC-20 standard)
+- **Real-time Flight Tracking**: Integration with Aviation Edge API for flight status
+- **AMM-based Pricing**: Automatic market maker for dynamic odds
+- **Win/Loss Tracking**: View your positions and track winnings
+- **Monad Testnet**: Fully deployed on Monad Testnet
 
-- **Live Flight Markets**: Bet on real flights with dynamic odds
-- **Real-Time Pricing**: Market-based pricing that updates based on demand
-- **Decentralized Resolution**: Automated flight status verification via backend oracle
-- **Monad Testnet**: Fast, low-cost transactions on Monad blockchain
-- **Auto Chain Switching**: Automatically prompts users to switch to Monad testnet
+## 💰 $DELAY Token
+
+**Important**: All betting and winnings use our custom ERC-20 token **$DELAY**.
+
+- **Token Name**: DelayDex Token
+- **Token Symbol**: DELAY
+- **Standard**: ERC-20
+- **Network**: Monad Testnet
+
+You need $DELAY tokens to:
+- Place bets on flight markets
+- Receive winnings (paid in $DELAY tokens)
+
+## 📋 Prerequisites
+
+- Node.js 18+ and pnpm
+- Bun runtime (for backend)
+- Foundry (for smart contracts)
+- MetaMask wallet with Monad Testnet configured
+- MON testnet tokens (for gas fees)
+- $DELAY tokens (for betting)
 
 ## 🏗️ Architecture
 
-This is a fullstack monorepo with three main components:
+This is a monorepo built with:
+- **Smart Contracts**: Solidity + Foundry (apps/contracts)
+- **Backend**: Bun.js + Viem (apps/backend)
+- **Frontend**: Next.js 14 + Wagmi + Tailwind CSS (apps/web)
 
-```
-delaydex/
-├── apps/
-│   ├── contracts/     # Solidity smart contracts (Foundry)
-│   ├── backend/       # Backend resolver service (Bun.js)
-│   └── web/           # Frontend application (Next.js)
-├── package.json       # Root package.json
-└── turbo.json         # Turborepo configuration
-```
-
-### Components
-
-1. **Smart Contracts** (`apps/contracts/`)
-   - Solidity contracts for prediction markets
-   - Market-based pricing mechanism
-   - Deployed on Monad testnet
-   - Built with Foundry
-
-2. **Backend Resolver** (`apps/backend/`)
-   - Bun.js REST API
-   - Fetches real-time flight data from Aviation Edge API
-   - Resolves markets on-chain
-   - Dockerized for easy deployment
-
-3. **Frontend** (`apps/web/`)
-   - Next.js 14 with App Router
-   - Wagmi + Viem for blockchain interactions
-   - Tailwind CSS + shadcn/ui components
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and PNPM
-- Bun (for backend)
-- Foundry (for contracts)
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/chiranjeev-vyas/delaydex.git
-   cd delaydex
-   ```
-
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-
-3. Set up environment variables:
-   - See `apps/backend/README.md` for backend
-   - See `apps/web/.env.local.example` for frontend (create this file)
-
-### Development
-
-Run all services in development mode:
+## 📦 Installation
 
 ```bash
-pnpm dev
+# Install dependencies
+pnpm install
+
+# Install Foundry (if not already installed)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install forge-std
+cd apps/contracts
+forge install foundry-rs/forge-std
 ```
 
-Or run individually:
+## 🔧 Environment Setup
 
-```bash
-# Frontend (port 3000)
-cd apps/web && pnpm dev
+### Frontend (apps/web/.env.local)
 
-# Backend (port 4500)
-cd apps/backend && bun run dev
-
-# Smart contracts
-cd apps/contracts && forge test
-```
-
-## 📦 Deployment
-
-### Smart Contracts
-
-1. Deploy to Monad testnet:
-   ```bash
-   cd apps/contracts
-   forge script script/DeployDelayMarket.s.sol --rpc-url $MONAD_RPC_URL --broadcast --verify
-   ```
-
-2. Update contract address in:
-   - `apps/backend/.env`
-   - `apps/web/.env.local`
-
-### Backend
-
-1. Set environment variables in `apps/backend/.env`
-2. Deploy to your preferred hosting (Render, Railway, etc.)
-3. Update frontend with backend URL
-
-### Frontend
-
-1. Set environment variables in `apps/web/.env.local`
-2. Build:
-   ```bash
-   cd apps/web
-   pnpm build
-   ```
-3. Deploy to Vercel, Netlify, or your preferred platform
-
-## 🔧 Tech Stack
-
-### Frontend
-
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Blockchain**: Wagmi v2 + Viem
-- **State**: React Query
-
-### Backend
-
-- **Runtime**: Bun.js
-- **Language**: TypeScript
-- **Blockchain**: Viem
-- **API**: Aviation Edge (flight data)
-
-### Smart Contracts
-
-- **Language**: Solidity 0.8.20
-- **Framework**: Foundry
-- **Chain**: Monad Testnet
-
-## 📋 Project Structure
-
-```
-delaydex/
-├── apps/
-│   ├── contracts/          # Smart contracts
-│   │   ├── src/
-│   │   │   ├── DelayMarket.sol
-│   │   │   └── mocks/
-│   │   ├── script/        # Deployment scripts
-│   │   ├── test/          # Contract tests
-│   │   └── foundry.toml
-│   │
-│   ├── backend/           # Backend resolver
-│   │   ├── index.ts       # Main server
-│   │   ├── package.json
-│   │   └── README.md
-│   │
-│   └── web/               # Frontend app
-│       ├── src/
-│       │   ├── app/       # Next.js pages
-│       │   ├── components/ # UI components
-│       │   ├── lib/       # Utilities
-│       └── package.json
-│
-├── package.json           # Root package.json
-└── turbo.json            # Turborepo config
-```
-
-## 🎮 How It Works
-
-### 1. Create a Market
-
-Users can create prediction markets for specific flights:
-
-- Enter flight details (airline, flight number, date, departure airport)
-- Market automatically created on Monad testnet
-- Initial shares minted based on market curve
-
-### 2. Trade Shares
-
-Users bet on outcomes by buying/selling shares:
-
-- **On Time**: Flight departs within 15 minutes of scheduled time
-- **Delayed Short**: Flight delayed by 30-119 minutes
-- **Delayed Long**: Flight delayed by 120+ minutes
-- **Cancelled**: Flight is cancelled
-- Prices adjust automatically based on demand
-
-### 3. Market Resolution
-
-After flight departure:
-
-- Backend fetches actual flight status from Aviation Edge API
-- Compares actual vs scheduled departure time
-- Submits resolution transaction to blockchain
-- Winners can claim their payouts
-
-### 4. Claim Winnings
-
-If your prediction was correct:
-
-- Redeem your winning shares
-- Receive payment tokens
-- Profit! 💰
-
-## 📊 Smart Contract Details
-
-### Key Functions
-
-```solidity
-// Create a new flight market
-function openMarket(
-    string flightNumber,
-    string originCode,
-    string destinationCode,
-    string airlineCode,
-    string scheduledDeparture
-) external returns (bytes32 marketId)
-
-// Place a bet
-function placeBet(
-    bytes32 marketId,
-    uint8 outcome,
-    uint8 position,
-    uint256 shares,
-    uint256 pricePerShare
-) external
-
-// Close market (resolver only)
-function closeMarket(
-    bytes32 marketId,
-    uint8 outcome
-) external
-
-// Claim winnings
-function claimWinnings(bytes32 marketId) external
-```
-
-## 🔑 Environment Setup
-
-### Backend Environment Variables
-
-Create `apps/backend/.env`:
-
-```bash
-MONAD_RPC_URL=https://testnet-rpc.monad.xyz
-MONAD_CHAIN_ID=10143
-MONAD_EXPLORER_URL=https://testnet-explorer.monad.xyz
-PRIVATE_KEY=0xYOUR_PRIVATE_KEY
-CONTRACT_ADDRESS=0xYOUR_CONTRACT_ADDRESS
-AVIATION_EDGE_API_KEY=your_api_key
-PORT=4500
-```
-
-### Frontend Environment Variables
-
-Create `apps/web/.env.local`:
-
-```bash
-NEXT_PUBLIC_MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+```env
+# Monad Testnet Configuration
 NEXT_PUBLIC_MONAD_CHAIN_ID=10143
-NEXT_PUBLIC_MONAD_EXPLORER_URL=https://testnet-explorer.monad.xyz
-NEXT_PUBLIC_CONTRACT_ADDRESS=0xYOUR_CONTRACT_ADDRESS
-NEXT_PUBLIC_BACKEND_URL=http://localhost:4500
+NEXT_PUBLIC_MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+NEXT_PUBLIC_MONAD_EXPLORER_URL=https://testnet.monadexplorer.com
+
+# Contract Addresses
+NEXT_PUBLIC_CONTRACT_ADDRESS=0xB2c57af2E5cD688d782061d438b7C26adb1a160E
+NEXT_PUBLIC_DELAY_TOKEN_ADDRESS=0xYOUR_DELAY_TOKEN_ADDRESS
+
+# Optional: WalletConnect
+NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id
 ```
 
-## 🧪 Testing
+### Backend (apps/backend/.env)
 
-### Smart Contracts
+```env
+# Monad Testnet RPC
+MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+
+# Private Key (for market resolution)
+PRIVATE_KEY=your_private_key
+
+# Contract Address
+CONTRACT_ADDRESS=0xB2c57af2E5cD688d782061d438b7C26adb1a160E
+
+# Aviation Edge API Key
+AVIATION_EDGE_API_KEY=your_api_key
+```
+
+## 🚀 Deployment
+
+### 1. Deploy $DELAY Token
 
 ```bash
 cd apps/contracts
-forge test
-forge test -vvv  # Verbose output
+forge script script/DeployDelayToken.s.sol \
+  --rpc-url https://testnet-rpc.monad.xyz \
+  --broadcast \
+  --private-key $PRIVATE_KEY
 ```
 
-### Local Testing Flow
+Save the deployed token address and update `NEXT_PUBLIC_DELAY_TOKEN_ADDRESS` in frontend `.env.local`.
 
-1. Start backend:
-   ```bash
-   cd apps/backend
-   bun run dev
-   ```
+### 2. Deploy DelayMarket Contract
 
-2. Start frontend:
-   ```bash
-   cd apps/web
-   pnpm dev
-   ```
+```bash
+cd apps/contracts
+forge script script/DeployDelayMarketWithToken.s.sol \
+  --rpc-url https://testnet-rpc.monad.xyz \
+  --broadcast \
+  --private-key $PRIVATE_KEY \
+  --sig "run(address)" 0xYOUR_DELAY_TOKEN_ADDRESS
+```
 
-3. Connect wallet and create a test market
-4. Place bets for different outcomes
-5. Resolve market via backend API
-6. Claim winnings
+Save the deployed contract address and update `NEXT_PUBLIC_CONTRACT_ADDRESS` in frontend `.env.local` and `CONTRACT_ADDRESS` in backend `.env`.
 
-## 📚 Available Scripts
+### 3. Seed Markets (Optional)
 
-### Root
+```bash
+cd apps/contracts
+forge script script/SeedMarkets.s.sol \
+  --rpc-url https://testnet-rpc.monad.xyz \
+  --broadcast \
+  --private-key $PRIVATE_KEY
+```
 
-- `pnpm dev` - Start all development servers
-- `pnpm build` - Build all packages
-- `pnpm lint` - Lint all packages
-- `pnpm type-check` - Type check all packages
+### 4. Mint $DELAY Tokens to Users
 
-### Frontend (`apps/web`)
+```bash
+cd apps/contracts
+forge script script/MintTokensToUser.s.sol \
+  --rpc-url https://testnet-rpc.monad.xyz \
+  --broadcast \
+  --private-key $PRIVATE_KEY \
+  --sig "run(address,address,uint256)" 0xTOKEN_ADDRESS 0xUSER_ADDRESS 10000
+```
 
-- `pnpm dev` - Start Next.js dev server
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
-- `pnpm lint` - Lint code
+## 🎮 Usage
 
-### Backend (`apps/backend`)
+### Start Development Servers
 
-- `bun run dev` - Start with hot reload
-- `bun run start` - Start production server
+```bash
+# Terminal 1: Backend
+cd apps/backend
+bun install
+bun run dev
 
-### Contracts (`apps/contracts`)
+# Terminal 2: Frontend
+cd apps/web
+pnpm install
+pnpm dev
+```
 
-- `forge build` - Compile contracts
-- `forge test` - Run tests
-- `forge script script/DeployDelayMarket.s.sol --rpc-url $MONAD_RPC_URL --broadcast` - Deploy to Monad testnet
+Visit `http://localhost:3000` to access the dApp.
 
-## 🐛 Troubleshooting
+### Connect Wallet
 
-### Common Issues
+1. Install MetaMask extension
+2. Add Monad Testnet network:
+   - Network Name: Monad Testnet
+   - RPC URL: https://testnet-rpc.monad.xyz
+   - Chain ID: 10143
+   - Currency Symbol: MON
+   - Block Explorer: https://testnet.monadexplorer.com
+3. Connect wallet in the dApp
+4. Ensure you have MON tokens for gas and $DELAY tokens for betting
 
-**Issue**: "Wrong network" error
+### Place a Bet
 
-- **Solution**: Make sure you're connected to Monad testnet. The app will auto-prompt to switch.
+1. Navigate to Markets page
+2. Select a flight market
+3. Choose outcome (On Time, 30+ min delay, 120+ min delay)
+4. Choose position (Yes/No)
+5. Enter shares amount
+6. Approve $DELAY token spending (first time only)
+7. Place bet
 
-**Issue**: Backend can't resolve markets
+### Claim Winnings
 
-- **Solution**: Check that PRIVATE_KEY is set and wallet has MON tokens for gas.
+1. Go to Markets page
+2. Find resolved markets where you have winning bets
+3. Click "Claim Winnings"
+4. Confirm transaction
+5. Receive $DELAY tokens
 
-**Issue**: Flight data not found
+## 📊 Contract Addresses (Monad Testnet)
 
-- **Solution**: Ensure flight details are correct and flight has actually departed.
+### DelayMarket Contract
+```
+0xB2c57af2E5cD688d782061d438b7C26adb1a160E
+```
 
-**Issue**: Transaction fails
+### $DELAY Token Contract
+```
+0xYOUR_DELAY_TOKEN_ADDRESS
+```
+*(Update with your deployed token address)*
 
-- **Solution**: Check you have sufficient payment tokens and the market hasn't been closed yet.
+**Explorer Links:**
+- [DelayMarket on Monad Explorer](https://testnet.monadexplorer.com/address/0xB2c57af2E5cD688d782061d438b7C26adb1a160E)
+- [$DELAY Token on Monad Explorer](https://testnet.monadexplorer.com/address/0xYOUR_DELAY_TOKEN_ADDRESS)
 
-## 📄 License
+## 🧪 Testing
 
-MIT License - see LICENSE file for details
+```bash
+# Run smart contract tests
+cd apps/contracts
+forge test
 
-## 💡 Inspiration
+# Type check frontend
+cd apps/web
+pnpm type-check
 
-Ever been anxious about your flight being delayed? Why not make money from that anxiety! DelayDex lets you bet on flight outcomes, turning travel stress into potential profit.
+# Lint
+pnpm lint
+```
+
+## 📁 Project Structure
+
+```
+delaydex/
+├── apps/
+│   ├── contracts/          # Solidity smart contracts
+│   │   ├── src/
+│   │   │   ├── DelayMarket.sol      # Main prediction market contract
+│   │   │   └── DelayToken.sol       # ERC-20 token contract
+│   │   ├── script/        # Deployment scripts
+│   │   └── test/          # Foundry tests
+│   ├── backend/           # Bun.js backend API
+│   │   └── index.ts       # Main server file
+│   └── web/               # Next.js frontend
+│       └── src/
+│           ├── app/       # Next.js app router pages
+│           ├── components/ # React components
+│           └── lib/       # Utilities and configs
+├── package.json
+└── README.md
+```
+
+## 🔐 Security Notes
+
+- **Never commit private keys or `.env` files**
+- Use testnet tokens only
+- Contracts are deployed on Monad Testnet (not mainnet)
+- Always verify contract addresses before transactions
+
+## 🛠️ Tech Stack
+
+- **Blockchain**: Monad Testnet
+- **Smart Contracts**: Solidity 0.8.20, Foundry
+- **Frontend**: Next.js 14, React, Wagmi, Viem, Tailwind CSS
+- **Backend**: Bun.js, Viem
+- **APIs**: Aviation Edge, OpenSky Network, AviationStack
+
+## 📝 License
+
+MIT
+
+## 🤝 Contributing
+
+This is a hackathon project. For questions or issues, please open an issue on GitHub.
+
+## 🔗 Links
+
+- **GitHub**: https://github.com/chiranjeev-vyas/delaydex
+- **Monad Testnet Explorer**: https://testnet.monadexplorer.com
+- **Monad Testnet RPC**: https://testnet-rpc.monad.xyz
 
 ---
 
-Made with ❤️ for Monad Hackathon. Safe travels! ✈️
+**Built for Monad Hackathon** 🚀

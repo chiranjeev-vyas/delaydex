@@ -205,6 +205,18 @@ export const DELAY_MARKET_ABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [
+      { internalType: "bytes32", name: "marketId", type: "bytes32" },
+      { internalType: "address", name: "user", type: "address" },
+      { internalType: "uint8", name: "outcome", type: "uint8" },
+      { internalType: "uint8", name: "position", type: "uint8" },
+    ],
+    name: "getUserBet",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
 // ERC20 ABI for token operations
