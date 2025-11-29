@@ -21,12 +21,12 @@ export function ResolveMarketButton({
 }: ResolveMarketButtonProps) {
   const [isResolving, setIsResolving] = useState(false);
   const [result, setResult] = useState<{ success: boolean; data?: ResolveMarketResponse; error?: string } | null>(null);
-  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [backendOnline, setBackendOnline] = useState<boolean>(true); // Default to true, will be updated by health check
 
   useEffect(() => {
-    checkBackendHealth().then(setBackendOnline);
+    checkBackendHealth().then((online) => setBackendOnline(online ?? false));
     const interval = setInterval(() => {
-      checkBackendHealth().then(setBackendOnline);
+      checkBackendHealth().then((online) => setBackendOnline(online ?? false));
     }, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
   }, []);
@@ -70,7 +70,7 @@ export function ResolveMarketButton({
     4: "Cancelled",
   };
 
-  if (backendOnline === false) {
+  if (!backendOnline) {
     return (
       <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
         <p className="text-yellow-400 text-sm">
@@ -85,7 +85,7 @@ export function ResolveMarketButton({
       <div className="flex items-center gap-2 mb-2">
         <button
           onClick={handleResolve}
-          disabled={isResolving || backendOnline === false}
+          disabled={isResolving || !backendOnline}
           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           {isResolving ? "Resolving..." : "Resolve Market"}

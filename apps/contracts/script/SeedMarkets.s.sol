@@ -6,11 +6,13 @@ import {DelayMarket} from "../src/DelayMarket.sol";
 
 contract SeedMarkets is Script {
     function run() external {
+        vm.startBroadcast();
+        
         address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
         DelayMarket market = DelayMarket(contractAddress);
 
-        console.log("Seeding markets on contract:", contractAddress);
-
+        // Seeding ALL markets on contract
+        
         // Popular Indian routes
         _createMarket(market, "AI101", "DEL", "BOM", "AI", "2025-02-15T08:00:00Z"); // Delhi-Mumbai Air India
         _createMarket(market, "6E205", "BOM", "DEL", "6E", "2025-02-15T10:30:00Z"); // Mumbai-Delhi IndiGo
@@ -20,7 +22,7 @@ contract SeedMarkets is Script {
         _createMarket(market, "6E501", "BOM", "MAA", "6E", "2025-02-17T13:20:00Z"); // Mumbai-Chennai IndiGo
         _createMarket(market, "UK701", "DEL", "CCU", "UK", "2025-02-18T06:00:00Z"); // Delhi-Kolkata Vistara
         _createMarket(market, "SG201", "BOM", "GOI", "SG", "2025-02-18T14:30:00Z"); // Mumbai-Goa SpiceJet
-
+        
         // International routes
         _createMarket(market, "EK501", "DEL", "DXB", "EK", "2025-02-19T02:30:00Z"); // Delhi-Dubai Emirates
         _createMarket(market, "BA138", "BOM", "LHR", "BA", "2025-02-19T23:45:00Z"); // Mumbai-London British Airways
@@ -28,8 +30,14 @@ contract SeedMarkets is Script {
         _createMarket(market, "SQ401", "BOM", "SIN", "SQ", "2025-02-20T08:00:00Z"); // Mumbai-Singapore Singapore Airlines
         _createMarket(market, "EK201", "DEL", "DXB", "EK", "2025-02-21T03:00:00Z"); // Delhi-Dubai Emirates
         _createMarket(market, "QF301", "BOM", "SYD", "QF", "2025-02-21T20:30:00Z"); // Mumbai-Sydney Qantas
+        
+        // Sample markets with data (from screenshot)
+        _createMarket(market, "AF1019", "FRA", "CDG", "AF", "2025-11-03T07:05:00.000Z"); // Paris-Frankfurt Air France
+        _createMarket(market, "TK3242", "IST", "EZE", "TK", "2025-11-21T12:10:00.000Z"); // Istanbul-Buenos Aires Turkish
+        _createMarket(market, "AA6677", "JFK", "LAX", "AA", "2025-11-29T12:10:00.000Z"); // New York-Los Angeles American
 
-        console.log("✅ All markets seeded successfully!");
+        vm.stopBroadcast();
+        // All markets seeded successfully
     }
 
     function _createMarket(
@@ -40,10 +48,10 @@ contract SeedMarkets is Script {
         string memory airlineCode,
         string memory scheduledDeparture
     ) internal {
-        try market.openMarket(flightNumber, originCode, destinationCode, airlineCode, scheduledDeparture) returns (bytes32 marketId) {
-            console.log("Created market:", flightNumber, originCode, destinationCode, marketId);
+        try market.openMarket(flightNumber, originCode, destinationCode, airlineCode, scheduledDeparture) returns (bytes32) {
+            // Market created successfully
         } catch {
-            console.log("Market already exists or error:", flightNumber);
+            // Market already exists or error - continue
         }
     }
 }

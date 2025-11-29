@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { DELAY_MARKET_CONTRACT_ADDRESS, DELAY_MARKET_ABI } from "@/lib/contract";
+import { monadTestnet } from "@/lib/wagmi";
 
 export function CreateMarketDialog({ onClose }: { onClose: () => void }) {
   const [flightNumber, setFlightNumber] = useState("");
@@ -10,6 +11,7 @@ export function CreateMarketDialog({ onClose }: { onClose: () => void }) {
   const [destinationCode, setDestinationCode] = useState("");
   const [airlineCode, setAirlineCode] = useState("");
   const [scheduledDeparture, setScheduledDeparture] = useState("");
+  const chainId = useChainId();
 
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -23,11 +25,18 @@ export function CreateMarketDialog({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    if (chainId !== monadTestnet.id) {
+      alert("Please switch to Monad Testnet to create markets");
+      return;
+    }
+
+    // CRITICAL: Force Monad Testnet
     writeContract({
       address: DELAY_MARKET_CONTRACT_ADDRESS,
       abi: DELAY_MARKET_ABI,
       functionName: "openMarket",
       args: [flightNumber, originCode, destinationCode, airlineCode, scheduledDeparture],
+      chainId: monadTestnet.id, // FORCE Monad Testnet - DO NOT REMOVE
     });
   };
 

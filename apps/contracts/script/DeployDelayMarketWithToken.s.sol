@@ -5,19 +5,19 @@ import {Script, console} from "forge-std/Script.sol";
 import {DelayMarket} from "../src/DelayMarket.sol";
 import {DelayToken} from "../src/DelayToken.sol";
 
-contract DeployDelayMarketScript is Script {
+contract DeployDelayMarketWithTokenScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        // Option 1: Deploy new DELAY token if PAYMENT_TOKEN_ADDRESS not set
+        // Option 1: Deploy new DELAY token if not provided
         // Option 2: Use existing token address from env
         address tokenAddress;
         
-        try vm.envAddress("PAYMENT_TOKEN_ADDRESS") returns (address envToken) {
+        try vm.envAddress("DELAY_TOKEN_ADDRESS") returns (address envToken) {
             tokenAddress = envToken;
-            console.log("Using existing token from env:", tokenAddress);
+            console.log("Using existing DELAY token from env:", tokenAddress);
         } catch {
-            // Deploy DELAY token
+            // Deploy new DELAY token
             console.log("Deploying new DELAY token...");
             uint256 initialSupply = 1000000; // 1,000,000 DELAY tokens
             DelayToken delayToken = new DelayToken(initialSupply);
@@ -25,6 +25,7 @@ contract DeployDelayMarketScript is Script {
             console.log("DELAY Token deployed at:", tokenAddress);
         }
 
+        // Deploy DelayMarket with DELAY token
         DelayMarket market = new DelayMarket(tokenAddress);
 
         console.log("DelayMarket deployed at:", address(market));

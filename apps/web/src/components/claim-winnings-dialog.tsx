@@ -1,10 +1,11 @@
 "use client";
 
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useChainId } from "wagmi";
 import { DELAY_MARKET_CONTRACT_ADDRESS, DELAY_MARKET_ABI } from "@/lib/contract";
+import { monadTestnet } from "@/lib/wagmi";
 
 export function ClaimWinningsDialog({ marketId, onClose }: { marketId: string; onClose: () => void }) {
-
+  const chainId = useChainId();
   const marketIdBytes = marketId.startsWith("0x") ? marketId as `0x${string}` : `0x${marketId}` as `0x${string}`;
 
   // Get market data to check if user has winnings
@@ -24,11 +25,18 @@ export function ClaimWinningsDialog({ marketId, onClose }: { marketId: string; o
   });
 
   const handleClaim = () => {
+    if (chainId !== monadTestnet.id) {
+      alert("Please switch to Monad Testnet to claim winnings");
+      return;
+    }
+
+    // CRITICAL: Force Monad Testnet
     writeContract({
       address: DELAY_MARKET_CONTRACT_ADDRESS,
       abi: DELAY_MARKET_ABI,
       functionName: "claimWinnings",
       args: [marketIdBytes],
+      chainId: monadTestnet.id, // FORCE Monad Testnet - DO NOT REMOVE
     });
   };
 
@@ -68,7 +76,7 @@ export function ClaimWinningsDialog({ marketId, onClose }: { marketId: string; o
               <div className="bg-gradient-to-r from-green-500/20 to-cyan-500/20 border border-green-500/50 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Claim Your Winnings</p>
                 <p className="text-2xl font-bold text-green-400">
-                  USDC Tokens
+                  DELAY Tokens
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   * Amount depends on your winning positions

@@ -8,14 +8,12 @@ import { CreateMarketDialog } from "@/components/create-market-dialog";
 import { BetDialog } from "@/components/bet-dialog";
 import { ClaimWinningsDialog } from "@/components/claim-winnings-dialog";
 import { ResolveMarketButton } from "@/components/resolve-market-button";
-import { useAutoSeedMarkets } from "@/hooks/use-auto-seed-markets";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { formatEther } from "viem";
 
 export default function MarketsPage() {
   const { isConnected } = useAccount();
-  const { seedingInProgress } = useAutoSeedMarkets();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
   const [claimMarket, setClaimMarket] = useState<string | null>(null);
@@ -27,20 +25,22 @@ export default function MarketsPage() {
     abi: DELAY_MARKET_ABI,
     functionName: "getAllMarkets",
     query: {
-      enabled: isConnected && DELAY_MARKET_CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000",
+      // Enable even if not connected - markets are public data
+      enabled: DELAY_MARKET_CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000",
       refetchInterval: 10000,
       retry: false,
     },
   });
 
   useEffect(() => {
-    if (isConnected) {
-      const interval = setInterval(() => {
+    // Auto-refresh markets every 10 seconds (markets are public data)
+    const interval = setInterval(() => {
+      if (DELAY_MARKET_CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
         refetch();
-      }, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [isConnected, refetch]);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -130,11 +130,6 @@ export default function MarketsPage() {
               Create New Market
             </button>
           )}
-          {seedingInProgress && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-400">🌱 Seeding sample markets...</p>
-            </div>
-          )}
         </div>
 
         <ChainWarning />
@@ -149,7 +144,7 @@ export default function MarketsPage() {
           <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
             <div className="text-3xl mb-2">💧</div>
             <p className="text-3xl font-bold text-white mb-1">${metrics.totalLiquidity.toFixed(0)}</p>
-            <p className="text-sm text-gray-400">Total liquidity locked in USDC</p>
+            <p className="text-sm text-gray-400">Total liquidity locked in DELAY</p>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
             <div className="text-3xl mb-2">🛡️</div>
@@ -312,7 +307,7 @@ export default function MarketsPage() {
                     <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600/50">
                       <div className="flex justify-between items-center mb-2">
                         <p className="text-sm font-semibold text-white">On Time</p>
-                        <span className="text-xs text-gray-400">Resolved</span>
+                        <span className="text-xs text-gray-400">{market.finalOutcome !== 0 ? "Resolved" : "Active"}</span>
                       </div>
                       {Number(market.onTime.yesShares) + Number(market.onTime.noShares) > 0 ? (
                         <>
@@ -324,12 +319,12 @@ export default function MarketsPage() {
                               NO {Number(market.onTime.noPrice) / 1e16}%
                             </span>
                           </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>YES: {Number(market.onTime.yesShares) / 1e18}</span>
-                            <span>NO: {Number(market.onTime.noShares) / 1e18}</span>
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>YES: {Math.round(Number(market.onTime.yesShares) / 1e18)}</span>
+                            <span>NO: {Math.round(Number(market.onTime.noShares) / 1e18)}</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Total: {(Number(market.onTime.yesShares) + Number(market.onTime.noShares)) / 1e18} shares
+                          <p className="text-xs text-gray-500">
+                            Total: {Math.round((Number(market.onTime.yesShares) + Number(market.onTime.noShares)) / 1e18)} shares
                           </p>
                         </>
                       ) : (
@@ -351,7 +346,7 @@ export default function MarketsPage() {
                     <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600/50">
                       <div className="flex justify-between items-center mb-2">
                         <p className="text-sm font-semibold text-white">30+ min delay</p>
-                        <span className="text-xs text-gray-400">Resolved</span>
+                        <span className="text-xs text-gray-400">{market.finalOutcome !== 0 ? "Resolved" : "Active"}</span>
                       </div>
                       {Number(market.delayedShort.yesShares) + Number(market.delayedShort.noShares) > 0 ? (
                         <>
@@ -363,12 +358,12 @@ export default function MarketsPage() {
                               NO {Number(market.delayedShort.noPrice) / 1e16}%
                             </span>
                           </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>YES: {Number(market.delayedShort.yesShares) / 1e18}</span>
-                            <span>NO: {Number(market.delayedShort.noShares) / 1e18}</span>
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>YES: {Math.round(Number(market.delayedShort.yesShares) / 1e18)}</span>
+                            <span>NO: {Math.round(Number(market.delayedShort.noShares) / 1e18)}</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Total: {(Number(market.delayedShort.yesShares) + Number(market.delayedShort.noShares)) / 1e18} shares
+                          <p className="text-xs text-gray-500">
+                            Total: {Math.round((Number(market.delayedShort.yesShares) + Number(market.delayedShort.noShares)) / 1e18)} shares
                           </p>
                         </>
                       ) : (
@@ -390,7 +385,7 @@ export default function MarketsPage() {
                     <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600/50">
                       <div className="flex justify-between items-center mb-2">
                         <p className="text-sm font-semibold text-white">120+ min delay</p>
-                        <span className="text-xs text-gray-400">Resolved</span>
+                        <span className="text-xs text-gray-400">{market.finalOutcome !== 0 ? "Resolved" : "Active"}</span>
                       </div>
                       {Number(market.delayedLong.yesShares) + Number(market.delayedLong.noShares) > 0 ? (
                         <>
@@ -402,12 +397,12 @@ export default function MarketsPage() {
                               NO {Number(market.delayedLong.noPrice) / 1e16}%
                             </span>
                           </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>YES: {Number(market.delayedLong.yesShares) / 1e18}</span>
-                            <span>NO: {Number(market.delayedLong.noShares) / 1e18}</span>
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>YES: {Math.round(Number(market.delayedLong.yesShares) / 1e18)}</span>
+                            <span>NO: {Math.round(Number(market.delayedLong.noShares) / 1e18)}</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Total: {(Number(market.delayedLong.yesShares) + Number(market.delayedLong.noShares)) / 1e18} shares
+                          <p className="text-xs text-gray-500">
+                            Total: {Math.round((Number(market.delayedLong.yesShares) + Number(market.delayedLong.noShares)) / 1e18)} shares
                           </p>
                         </>
                       ) : (
@@ -474,18 +469,14 @@ export default function MarketsPage() {
               <>
                 <p className="text-white text-lg font-semibold mb-2">No markets found</p>
                 <p className="text-gray-400 text-sm mb-4">
-                  {seedingInProgress 
-                    ? "🌱 Seeding sample markets, please wait..."
-                    : "Create the first market to get started!"}
+                  Create the first market to get started!
                 </p>
-                {!seedingInProgress && (
-                  <button
-                    onClick={() => setShowCreate(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold"
-                  >
-                    + Create New Market
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold"
+                >
+                  + Create New Market
+                </button>
               </>
             )}
           </div>

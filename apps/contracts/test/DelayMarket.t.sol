@@ -3,11 +3,11 @@ pragma solidity ^0.8.20;
 
 import {Test, console} from "forge-std/Test.sol";
 import {DelayMarket} from "../src/DelayMarket.sol";
-import {MockERC20} from "../src/mocks/MockERC20.sol";
+import {DelayToken} from "../src/DelayToken.sol";
 
 contract DelayMarketTest is Test {
     DelayMarket public market;
-    MockERC20 public token;
+    DelayToken public token;
 
     address public owner;
     address public user1;
@@ -20,7 +20,7 @@ contract DelayMarketTest is Test {
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
-        token = new MockERC20("Test Token", "TEST", 1000000);
+        token = new DelayToken(1000000);
         market = new DelayMarket(address(token));
 
         token.mint(user1, 10000 ether);
@@ -115,6 +115,7 @@ contract DelayMarketTest is Test {
         uint256 shares = 100 ether;
         uint256 price = 0.30 ether;
 
+        // User1 bets YES on OnTime
         vm.startPrank(user1);
         token.approve(address(market), 30 ether);
         market.placeBet(
@@ -126,6 +127,18 @@ contract DelayMarketTest is Test {
         );
         vm.stopPrank();
 
+        // User2 bets NO on OnTime to provide liquidity
+        vm.startPrank(user2);
+        token.approve(address(market), 70 ether);
+        market.placeBet(
+            marketId,
+            DelayMarket.DelayOutcome.OnTime,
+            DelayMarket.BetPosition.No,
+            100 ether,
+            0.70 ether
+        );
+        vm.stopPrank();
+
         market.closeMarket(marketId, DelayMarket.DelayOutcome.OnTime);
 
         uint256 balanceBefore = token.balanceOf(user1);
@@ -133,13 +146,14 @@ contract DelayMarketTest is Test {
         market.claimWinnings(marketId);
         uint256 balanceAfter = token.balanceOf(user1);
 
-        assertEq(balanceAfter - balanceBefore, shares, "Should win $100");
+        assertEq(balanceAfter - balanceBefore, shares, "Should win 100 tokens");
     }
 
     function testClaimWinningsNo() public {
         uint256 shares = 50 ether;
         uint256 price = 0.70 ether;
 
+        // User1 bets NO on OnTime
         vm.startPrank(user1);
         token.approve(address(market), 35 ether);
         market.placeBet(
@@ -151,6 +165,19 @@ contract DelayMarketTest is Test {
         );
         vm.stopPrank();
 
+        // User2 bets YES on OnTime to provide liquidity
+        vm.startPrank(user2);
+        token.approve(address(market), 15 ether);
+        market.placeBet(
+            marketId,
+            DelayMarket.DelayOutcome.OnTime,
+            DelayMarket.BetPosition.Yes,
+            50 ether,
+            0.30 ether
+        );
+        vm.stopPrank();
+
+        // Market resolves as DelayedShort (not OnTime), so user1's NO bet wins
         market.closeMarket(marketId, DelayMarket.DelayOutcome.DelayedShort);
 
         uint256 balanceBefore = token.balanceOf(user1);
@@ -158,7 +185,7 @@ contract DelayMarketTest is Test {
         market.claimWinnings(marketId);
         uint256 balanceAfter = token.balanceOf(user1);
 
-        assertEq(balanceAfter - balanceBefore, shares, "Should win $50");
+        assertEq(balanceAfter - balanceBefore, shares, "Should win 50 tokens");
     }
 
     function testGetPrice() public {
