@@ -67,7 +67,7 @@ NEXT_PUBLIC_MONAD_EXPLORER_URL=https://testnet.monadexplorer.com
 
 # Contract Addresses
 NEXT_PUBLIC_CONTRACT_ADDRESS=0xB2c57af2E5cD688d782061d438b7C26adb1a160E
-NEXT_PUBLIC_DELAY_TOKEN_ADDRESS=0xYOUR_DELAY_TOKEN_ADDRESS
+NEXT_PUBLIC_DELAY_TOKEN_ADDRESS=0xf519c7BF476715775b50e3080d965C6dBC034483
 
 # Optional: WalletConnect
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id
@@ -194,13 +194,12 @@ Visit `http://localhost:3000` to access the dApp.
 
 ### $DELAY Token Contract
 ```
-0xYOUR_DELAY_TOKEN_ADDRESS
+0xf519c7BF476715775b50e3080d965C6dBC034483
 ```
-*(Update with your deployed token address)*
 
 **Explorer Links:**
 - [DelayMarket on Monad Explorer](https://testnet.monadexplorer.com/address/0xB2c57af2E5cD688d782061d438b7C26adb1a160E)
-- [$DELAY Token on Monad Explorer](https://testnet.monadexplorer.com/address/0xYOUR_DELAY_TOKEN_ADDRESS)
+- [$DELAY Token on Monad Explorer](https://testnet.monadexplorer.com/address/0xf519c7BF476715775b50e3080d965C6dBC034483)
 
 ## 🧪 Testing
 
